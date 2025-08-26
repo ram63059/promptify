@@ -1,6 +1,5 @@
 import app from './app'
 
-import {config} from './config/database'
 
 const PORT =process.env.PORT || 3001;
 
