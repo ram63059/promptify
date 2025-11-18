@@ -1,0 +1,75 @@
+#promptify-card {
+  position: fixed;
+  top: 50%;
+  right: -400px;  /* Off-screen start */
+  transform: translateY(-50%);
+  width: 350px;
+  max-height: 80vh;
+  z-index: 9999;
+  transition: right 0.3s ease;
+  pointer-events: none;  /* Allow page clicks through when hidden */
+}
+#promptify-card.visible {
+  right: 20px;
+  pointer-events: all;
+}
+.card-content {
+  background: #fafafa;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);  /* Float shadow */
+  overflow: hidden;
+  pointer-events: all;
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #4285f4;
+  color: white;
+}
+.logo { font-size: 24px; font-weight: bold; }
+.sign-in, .close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: white;
+  padding: 4px;
+}
+.close-btn { font-size: 24px; }
+.auth-section, .main-content {
+  padding: 16px;
+}
+.auth-prompt { font-size: 14px; color: #666; margin-bottom: 12px; text-align: center; }
+form { display: flex; flex-direction: column; gap: 12px; }
+input, button { padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+button { background: #4285f4; color: white; cursor: pointer; border: none; }
+button:hover:not(:disabled) { opacity: 0.9; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.main-content.hidden { display: none; }
+.instruction { font-size: 14px; color: #666; line-height: 1.4; margin-bottom: 8px; }
+textarea { resize: vertical; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; width: 100%; }
+.output-section { gap: 8px; margin: 12px 0; }
+.copy-btn { background: #34a853; align-self: flex-start; padding: 8px 16px; }
+.quota-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+  padding: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  margin: 12px 0;
+}
+.upgrade-link { color: #4285f4; text-decoration: none; font-weight: bold; }
+.enhance-btn { background: #4285f4; font-size: 16px; font-weight: bold; padding: 16px; border-radius: 8px; width: 100%; }
+/* Accessibility */
+button:focus, input:focus, textarea:focus { outline: 2px solid #4285f4; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { #promptify-card { transition: none !important; } }
+@media (max-width: 400px) { #promptify-card.visible { right: 10px; width: 90vw; } }  /* Mobile adjust */
