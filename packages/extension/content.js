@@ -1,18 +1,37 @@
 console.log("CONTENT SCRIPT LOADED");
 
 let card = null;
+let floatingBtn = null;
 let isVisible = false;
-let currentView = 'locked'; // locked, signin, email-step, password-step, main
+let currentView = 'locked';
 let userEmail = '';
 let isAuthenticated = false;
+let showUserDropdown = false;
 
-// Prevent multiple injections
+// Check if on AI site
+const AI_SITES = [
+  'chat.openai.com',
+  'chatgpt.com',
+  'claude.ai',
+  'grok.x.com',
+  'bard.google.com',
+  'gemini.google.com',
+  'bing.com/chat',
+  'perplexity.ai'
+];
+
+const isAISite = AI_SITES.some(site => window.location.hostname.includes(site));
+
 if (window.promptifyInjected) {
   console.log("Promptify already injected");
 } else {
   window.promptifyInjected = true;
 
-  // Listen for toggle from background
+  // Create floating button on AI sites
+  if (isAISite) {
+    createFloatingButton();
+  }
+
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'toggleCard') {
       toggleCard();
@@ -20,6 +39,29 @@ if (window.promptifyInjected) {
     }
     return true;
   });
+
+  function createFloatingButton() {
+    if (floatingBtn) return;
+
+    floatingBtn = document.createElement('div');
+    floatingBtn.id = 'promptify-floating-btn';
+    floatingBtn.innerHTML = `
+      <button class="float-btn" id="openPromptifyBtn" title="Open Promptify">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+      </button>
+    `;
+    document.body.appendChild(floatingBtn);
+
+    const btn = floatingBtn.querySelector('#openPromptifyBtn');
+    btn.addEventListener('click', () => {
+      if (!isVisible) {
+        showCard();
+      }
+    });
+  }
 
   function toggleCard() {
     if (isVisible) {
@@ -54,6 +96,35 @@ if (window.promptifyInjected) {
   }
 
   function getHeaderHTML() {
+    if (isAuthenticated) {
+      return `
+        <div class="card-header">
+          <div class="header-left">
+            <span class="logo-icon">P</span>
+            <span class="logo-text">Promptify</span>
+          </div>
+          <div class="header-right">
+            <button class="user-menu-btn" id="userMenuBtn">
+              <div class="user-avatar-small">👤</div>
+            </button>
+            <button class="close-btn-icon" id="closeBtn">✕</button>
+          </div>
+          ${showUserDropdown ? `
+            <div class="user-dropdown" id="userDropdown">
+              <div class="dropdown-header">
+                <div class="dropdown-avatar">👤</div>
+                <div class="dropdown-info">
+                  <div class="dropdown-name">Alex Johnson</div>
+                  <div class="dropdown-plan">Pro plan</div>
+                </div>
+              </div>
+              <button class="dropdown-logout" id="dropdownLogout">Log out</button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
     return `
       <div class="card-header">
         <div class="header-left">
@@ -61,16 +132,10 @@ if (window.promptifyInjected) {
           <span class="logo-text">Promptify</span>
         </div>
         <div class="header-right">
-          ${isAuthenticated ? `
-            <button class="user-menu-btn" id="userMenuBtn">
-              <div class="user-avatar-small">👤</div>
-            </button>
-          ` : `
-            <button class="header-action-btn" id="headerActionBtn">
-              ${currentView === 'locked' ? '<span>Sign in</span>' : '<span>✕</span>'}
-            </button>
-          `}
-          <button class="close-btn" id="closeBtn">✕</button>
+          <button class="header-action-btn" id="headerActionBtn">
+            ${currentView === 'locked' ? '<span>Sign in</span>' : '<span>✕</span>'}
+          </button>
+          <button class="close-btn-icon" id="closeBtn">✕</button>
         </div>
       </div>
     `;
@@ -218,58 +283,49 @@ if (window.promptifyInjected) {
   function getMainViewHTML() {
     return `
       <div class="card-body main-view">
-        <div class="user-info-bar">
-          <div class="user-avatar">👤</div>
-          <div class="user-details">
-            <span class="user-name">John Doe</span>
-            <span class="user-plan">Pro Plan</span>
-          </div>
-          <button class="logout-btn" id="logoutBtn">Logout</button>
-        </div>
-        
         <div class="input-section">
-          <label class="section-label">Your prompt</label>
+          <label class="section-label">Your text</label>
           <textarea 
             id="userPrompt" 
-            placeholder="Type or paste what you want to ask the AI. Add details like tone, format, or context..."
+            placeholder="Rewrite the below email to sound concise, keep it under 120 words, and end with a call to action asking for a meeting next week."
             rows="5"
           ></textarea>
           <div class="char-count">
-            <span id="charCount">0</span> / 2000 characters
+            <span id="charCount">0</span> / 2000
           </div>
         </div>
-        
+        <div class="enhance-btn-wrapper">
         <button class="enhance-btn" id="enhanceBtn">
-          <span>✨</span>
-          <span>Make it Clear</span>
+        <span>→</span>
+        <span>Make it clear</span>
         </button>
+        </div>
         
         <div class="output-section" id="outputSection" style="display: none;">
-          <label class="section-label">Enhanced Prompt</label>
+          <div class="output-header">
+            <label class="section-label">Refined prompt</label>
+            <div class="output-badges">
+              <span class="badge badge-blue">Ready to use</span>
+              <span class="badge badge-gray">Polished for your AI assistant</span>
+            </div>
+          </div>
           <div class="output-box" id="outputBox"></div>
+          
+           <div class="copy-btn-wrapper">
           <button class="copy-btn" id="copyBtn">
             <span>📋</span>
-            <span>Copy to Clipboard</span>
+            <span>Copy to clipboard</span>
           </button>
-        </div>
-        
-        <div class="usage-bar">
-          <div class="usage-info">
-            <span class="usage-icon">⚡</span>
-            <span class="usage-text">15 enhancements left today</span>
           </div>
-          <button class="upgrade-link" id="upgradeBtn">Upgrade</button>
         </div>
       </div>
     `;
   }
 
   function setupEventListeners() {
-    // Close button
     const closeBtn = card.querySelector('#closeBtn');
     if (closeBtn) closeBtn.addEventListener('click', hideCard);
 
-    // Header action button
     const headerActionBtn = card.querySelector('#headerActionBtn');
     if (headerActionBtn) {
       headerActionBtn.addEventListener('click', () => {
@@ -281,18 +337,36 @@ if (window.promptifyInjected) {
       });
     }
 
-    // Locked view
+    const userMenuBtn = card.querySelector('#userMenuBtn');
+    if (userMenuBtn) {
+      userMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showUserDropdown = !showUserDropdown;
+        updateCardContent();
+      });
+    }
+
+    const dropdownLogout = card.querySelector('#dropdownLogout');
+    if (dropdownLogout) {
+      dropdownLogout.addEventListener('click', handleLogout);
+    }
+
+    // Close dropdown when clicking outside
+    if (showUserDropdown) {
+      setTimeout(() => {
+        document.addEventListener('click', closeDropdownOnClickOutside);
+      }, 0);
+    }
+
     const unlockBtn = card.querySelector('#unlockBtn');
     if (unlockBtn) unlockBtn.addEventListener('click', () => switchView('signin'));
 
-    // Sign in view
     const googleAuthBtn = card.querySelector('#googleAuthBtn');
     if (googleAuthBtn) googleAuthBtn.addEventListener('click', handleGoogleAuth);
 
     const emailSignInBtn = card.querySelector('#emailSignInBtn');
     if (emailSignInBtn) emailSignInBtn.addEventListener('click', () => switchView('email-step'));
 
-    // Email step
     const continueEmailBtn = card.querySelector('#continueEmailBtn');
     if (continueEmailBtn) continueEmailBtn.addEventListener('click', handleEmailContinue);
 
@@ -303,7 +377,6 @@ if (window.promptifyInjected) {
       });
     }
 
-    // Password step
     const signInBtn = card.querySelector('#signInBtn');
     if (signInBtn) signInBtn.addEventListener('click', handlePasswordSignIn);
 
@@ -320,10 +393,6 @@ if (window.promptifyInjected) {
     const forgotPasswordLink = card.querySelector('#forgotPasswordLink');
     if (forgotPasswordLink) forgotPasswordLink.addEventListener('click', handleForgotPassword);
 
-    // Main view
-    const logoutBtn = card.querySelector('#logoutBtn');
-    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
-
     const enhanceBtn = card.querySelector('#enhanceBtn');
     if (enhanceBtn) enhanceBtn.addEventListener('click', handleEnhance);
 
@@ -335,13 +404,11 @@ if (window.promptifyInjected) {
       userPrompt.addEventListener('input', updateCharCount);
     }
 
-    // Back buttons
     const backBtns = card.querySelectorAll('.back-btn');
     backBtns.forEach(btn => {
       btn.addEventListener('click', handleBack);
     });
 
-    // External links
     const signUpLinks = card.querySelectorAll('[id^="signUpLink"]');
     signUpLinks.forEach(link => {
       link.addEventListener('click', (e) => {
@@ -349,6 +416,14 @@ if (window.promptifyInjected) {
         window.open('https://yourwebsite.com/signup', '_blank');
       });
     });
+  }
+
+  function closeDropdownOnClickOutside(e) {
+    if (!e.target.closest('.user-dropdown') && !e.target.closest('.user-menu-btn')) {
+      showUserDropdown = false;
+      updateCardContent();
+      document.removeEventListener('click', closeDropdownOnClickOutside);
+    }
   }
 
   function switchView(newView) {
@@ -376,11 +451,7 @@ if (window.promptifyInjected) {
     btn.innerHTML = '<span>Signing in...</span>';
     btn.disabled = true;
 
-    // Simulate Google OAuth
     setTimeout(() => {
-      // TODO: Implement actual Supabase Google OAuth
-      // supabase.auth.signInWithOAuth({ provider: 'google' })
-      
       showToast('✓ Signed in with Google!', 'success');
       isAuthenticated = true;
       switchView('main');
@@ -408,11 +479,7 @@ if (window.promptifyInjected) {
     btn.innerHTML = '<span>Checking...</span>';
     btn.disabled = true;
 
-    // Simulate API call to check if email exists
     setTimeout(() => {
-      // TODO: Check if email exists in Supabase
-      // const { data } = await supabase.from('users').select('email').eq('email', email)
-      
       userEmail = email;
       switchView('password-step');
     }, 1500);
@@ -434,12 +501,8 @@ if (window.promptifyInjected) {
     btn.innerHTML = '<span>Signing in...</span>';
     btn.disabled = true;
 
-    // Simulate sign in
     setTimeout(() => {
-      // TODO: Implement actual Supabase auth
-      // const { data, error } = await supabase.auth.signInWithPassword({ email: userEmail, password })
-      
-      const success = Math.random() > 0.3; // 70% success rate for demo
+      const success = Math.random() > 0.3;
       
       if (success) {
         showToast('✓ Welcome back!', 'success');
@@ -468,16 +531,13 @@ if (window.promptifyInjected) {
 
   function handleForgotPassword(e) {
     e.preventDefault();
-    
-    // TODO: Implement password reset
-    // await supabase.auth.resetPasswordForEmail(userEmail)
-    
     showToast('Password reset link sent to ' + userEmail, 'info');
   }
 
   function handleLogout() {
     isAuthenticated = false;
     userEmail = '';
+    showUserDropdown = false;
     switchView('locked');
     showToast('Logged out successfully', 'info');
   }
@@ -492,11 +552,11 @@ if (window.promptifyInjected) {
     }
 
     const btn = card.querySelector('#enhanceBtn');
-    btn.innerHTML = '<span>✨</span><span>Enhancing...</span>';
+    btn.innerHTML = '<span>⏳</span><span>Enhancing...</span>';
     btn.disabled = true;
 
     setTimeout(() => {
-      const enhanced = `[ENHANCED PROMPT]\n\n${prompt}\n\n[Additional context and structure added for optimal AI interaction with clear instructions, desired format, and expected output specifications.]`;
+      const enhanced = `You are an expert communication assistant. Transform the following request into a concise, friendly email under 120 words. Maintain a professional tone, clearly state the purpose, and end with a direct call to action proposing a meeting next week. Return only the final email draft in English, formatted in short paragraphs. If details are missing, make reasonable assumptions.\n\nOriginal request: ${prompt}`;
       
       const outputBox = card.querySelector('#outputBox');
       const outputSection = card.querySelector('#outputSection');
@@ -504,7 +564,7 @@ if (window.promptifyInjected) {
       outputBox.textContent = enhanced;
       outputSection.style.display = 'flex';
       
-      btn.innerHTML = '<span>✨</span><span>Make it Clear</span>';
+      btn.innerHTML = '<span>→</span><span>Make it clear</span>';
       btn.disabled = false;
       
       showToast('✓ Prompt enhanced!', 'success');
@@ -561,6 +621,7 @@ if (window.promptifyInjected) {
 
   function hideCard() {
     if (card) {
+      showUserDropdown = false;
       card.classList.remove('visible');
       setTimeout(() => {
         if (card && card.parentNode) {
@@ -570,10 +631,10 @@ if (window.promptifyInjected) {
       }, 300);
     }
     document.removeEventListener('keydown', escapeHandler);
+    document.removeEventListener('click', closeDropdownOnClickOutside);
     isVisible = false;
   }
 
-  // Clean up
   const existingCard = document.getElementById('promptify-card');
   if (existingCard) existingCard.remove();
 }
