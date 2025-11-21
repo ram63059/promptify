@@ -1,34 +1,59 @@
 /* ===== FLOATING BUTTON ===== */
 #promptify-floating-btn {
   position: fixed;
-  top: 50%;
-  right: 60px;
+  top: 30%;
+  right: 20px;
   transform: translateY(-50%);
   z-index: 999998;
+  transition: box-shadow 0.2s ease;
 }
 
 #promptify-floating-btn .float-btn {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 52px;
+  height: 52px;
+  background: #4d7bf3;
   border: none;
-  border-radius: 14px;
-  cursor: pointer;
+  border-radius: 12px;
+  cursor: grab;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 12px rgba(77, 123, 243, 0.3);
+  transition: all 0.2s ease;
   color: white;
-}
-
-#promptify-floating-btn .float-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 28px rgba(102, 126, 234, 0.5);
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #promptify-floating-btn .float-btn:active {
-  transform: scale(0.95);
+  cursor: grabbing;
+}
+
+#promptify-floating-btn .drag-handle {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 0.8;
+  letter-spacing: -1px;
+  pointer-events: none;
+}
+
+#promptify-floating-btn .float-btn svg {
+  margin-top: 4px;
+}
+
+#promptify-floating-btn .float-btn:hover {
+  box-shadow: 0 4px 16px rgba(77, 123, 243, 0.5);
+  transform: scale(1.10);
+}
+
+#promptify-floating-btn .float-btn:active {
+  transform: scale(0.98);
 }
 
 /* ===== CARD CONTAINER ===== */
@@ -37,14 +62,15 @@
   top: 50%;
   right: -420px;
   transform: translateY(-50%);
-  width: 400px;
-  max-height: 90vh;
+  width: 360px;
+  max-height: 92vh;
   z-index: 999999;
-  transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   pointer-events: all;
-  color: #333;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 14px;
+
+  
 }
 
 #promptify-card.visible {
@@ -52,11 +78,11 @@
 }
 
 #promptify-card .card-content {
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  max-height: 90vh;
+  max-height: 92vh;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -68,9 +94,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 16px;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e8eaed;
   flex-shrink: 0;
 }
 
@@ -81,20 +107,20 @@
 }
 
 #promptify-card .logo-icon {
-  width: 36px;
-  height: 36px;
-  background: #3b82f6;
+  width: 32px;
+  height: 32px;
+  background: #4d7bf3;
   color: white;
-  border-radius: 10px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 #promptify-card .logo-text {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: #1f2937;
 }
@@ -102,14 +128,14 @@
 #promptify-card .header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 #promptify-card .user-menu-btn {
-  background: #f3f4f6;
+  background: #f1f3f4;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -119,11 +145,11 @@
 }
 
 #promptify-card .user-menu-btn:hover {
-  background: #e5e7eb;
+  background: #e8eaed;
 }
 
 #promptify-card .user-avatar-small {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 #promptify-card .close-btn-icon {
@@ -131,46 +157,30 @@
   border: none;
   cursor: pointer;
   font-size: 20px;
-  color: #6b7280;
+  color: #5f6368;
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 50%;
   transition: background 0.2s;
+  line-height: 1;
 }
 
 #promptify-card .close-btn-icon:hover {
-  background: #f3f4f6;
-}
-
-#promptify-card .header-action-btn {
-  background: none;
-  border: 1px solid #e5e7eb;
-  padding: 6px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #1f2937;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-#promptify-card .header-action-btn:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+  background: #f1f3f4;
 }
 
 /* ===== USER DROPDOWN ===== */
 #promptify-card .user-dropdown {
   position: absolute;
-  top: 70px;
-  right: 24px;
-  width: 240px;
+  top: 60px;
+  right: 20px;
+  width: 180px;
   background: #374151;
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
   overflow: hidden;
   z-index: 1000;
   animation: dropdownSlide 0.2s ease;
@@ -179,7 +189,7 @@
 @keyframes dropdownSlide {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
@@ -196,14 +206,14 @@
 }
 
 #promptify-card .dropdown-avatar {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   background: #4b5563;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 20px;
   flex-shrink: 0;
 }
 
@@ -211,17 +221,17 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 #promptify-card .dropdown-name {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
-  color: white;
+  color: #ffffff;
 }
 
 #promptify-card .dropdown-plan {
-  font-size: 13px;
+  font-size: 12px;
   color: #9ca3af;
 }
 
@@ -229,7 +239,7 @@
   width: 100%;
   background: none;
   border: none;
-  padding: 14px 16px;
+  padding: 12px 16px;
   text-align: left;
   cursor: pointer;
   font-size: 14px;
@@ -244,12 +254,12 @@
 
 /* ===== CARD BODY ===== */
 #promptify-card .card-body {
-  padding: 16px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   overflow-y: auto;
-  max-height: calc(90vh - 75px);
+  max-height: calc(92vh - 65px);
   flex: 1;
 }
 
@@ -262,88 +272,86 @@
 }
 
 #promptify-card .card-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #dadce0;
   border-radius: 3px;
 }
 
 #promptify-card .card-body::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* ===== TYPOGRAPHY ===== */
-#promptify-card h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-}
-
-#promptify-card p {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0;
-}
-
-#promptify-card a {
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-#promptify-card a:hover {
-  text-decoration: underline;
+  background: #bdc1c6;
 }
 
 /* ===== LOCKED VIEW ===== */
 #promptify-card .locked-view {
   text-align: center;
-  padding: 20px 0;
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
 }
 
-#promptify-card .locked-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+#promptify-card .locked-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  background: #f1f3f4;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+#promptify-card .locked-icon-svg {
+  color: #5f6368;
 }
 
 #promptify-card .locked-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: #1f2937;
+  font-size: 22px;
+  font-weight: 600;
+  color: #202124;
+  margin: 0;
+  line-height: 1.3;
 }
 
 #promptify-card .locked-subtitle {
-  font-size: 15px;
-  color: #6b7280;
-  margin-bottom: 24px;
-  line-height: 1.6;
+  font-size: 14px;
+  color: #5f6368;
+  line-height: 1.5;
+  max-width: 280px;
+  margin: 0;
 }
 
 #promptify-card .locked-footer {
-  margin-top: 24px;
+  margin-top: 12px;
   font-size: 13px;
-  color: #6b7280;
+  color: #5f6368;
 }
 
 /* ===== BUTTONS ===== */
 #promptify-card .primary-btn {
-  background: #3b82f6;
+  background: #4d7bf3;
   color: white;
   border: none;
-  padding: 14px 20px;
-  border-radius: 12px;
+  padding: 11px 24px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   transition: all 0.2s;
-  width: 100%;
+  box-shadow: 0 1px 3px rgba(77, 123, 243, 0.2);
 }
 
 #promptify-card .primary-btn:hover:not(:disabled) {
-  background: #2563eb;
+  background: #3d6de6;
+  box-shadow: 0 2px 6px rgba(77, 123, 243, 0.3);
+}
+
+#promptify-card .primary-btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 #promptify-card .primary-btn:disabled {
@@ -354,25 +362,31 @@
 #promptify-card .google-auth-btn,
 #promptify-card .email-signin-btn {
   width: 100%;
-  padding: 14px 20px;
-  border-radius: 12px;
-  border: 1.5px solid #e5e7eb;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #dadce0;
   background: white;
-  color: #1f2937;
-  font-size: 15px;
+  color: #202124;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   transition: all 0.2s;
 }
 
 #promptify-card .google-auth-btn:hover:not(:disabled),
 #promptify-card .email-signin-btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  background: #f8f9fa;
+  border-color: #bdc1c6;
+}
+
+#promptify-card .google-auth-btn:disabled,
+#promptify-card .email-signin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 #promptify-card .back-btn {
@@ -380,57 +394,85 @@
   border: none;
   cursor: pointer;
   font-size: 14px;
-  color: #3b82f6;
-  padding: 6px 0;
+  color: #4d7bf3;
+  padding: 0;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   align-self: flex-start;
   margin-bottom: 8px;
 }
 
 #promptify-card .back-btn:hover {
-  color: #2563eb;
+  color: #3d6de6;
 }
 
 #promptify-card .divider {
   display: flex;
   align-items: center;
   text-align: center;
-  color: #9ca3af;
-  font-size: 13px;
-  margin: 8px 0;
+  color: #80868b;
+  font-size: 12px;
+  margin: 12px 0;
 }
 
 #promptify-card .divider::before,
 #promptify-card .divider::after {
   content: "";
   flex: 1;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e8eaed;
 }
 
 #promptify-card .divider span {
-  padding: 0 12px;
+  padding: 0 16px;
 }
 
-/* ===== FORM ELEMENTS ===== */
+/* ===== TYPOGRAPHY ===== */
+#promptify-card h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #202124;
+  margin: 0;
+}
+
+#promptify-card p {
+  font-size: 14px;
+  color: #5f6368;
+  margin: 0;
+}
+
+#promptify-card a {
+  color: #4d7bf3;
+  text-decoration: none;
+}
+
+#promptify-card a:hover {
+  text-decoration: underline;
+}
+
+/* ===== FORM VIEWS ===== */
 #promptify-card .signin-header,
 #promptify-card .step-header {
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 #promptify-card .signin-header h2,
 #promptify-card .step-header h2 {
-  font-size: 22px;
-  margin-bottom: 8px;
+  font-size: 20px;
+  margin-bottom: 6px;
 }
 
 #promptify-card .signin-footer,
 #promptify-card .step-footer {
-  margin-top: 20px;
+  margin-top: 12px;
   text-align: center;
   font-size: 13px;
-  color: #6b7280;
+  color: #5f6368;
 }
 
 #promptify-card .form-group {
@@ -440,17 +482,17 @@
 }
 
 #promptify-card .form-group label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: #202124;
 }
 
 #promptify-card .form-group input {
-  padding: 12px 14px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 10px;
+  padding: 11px 14px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
   font-size: 14px;
-  color: #1f2937;
+  color: #202124;
   font-family: inherit;
   width: 100%;
   box-sizing: border-box;
@@ -459,14 +501,14 @@
 
 #promptify-card .form-group input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #4d7bf3;
+  box-shadow: 0 0 0 3px rgba(77, 123, 243, 0.1);
 }
 
 #promptify-card .input-error {
-  color: #ef4444;
+  color: #d93025;
   font-size: 12px;
-  min-height: 18px;
+  min-height: 16px;
 }
 
 #promptify-card .password-input-wrapper {
@@ -476,30 +518,38 @@
 }
 
 #promptify-card .password-input-wrapper input {
-  padding-right: 45px;
+  padding-right: 42px;
 }
 
 #promptify-card .password-input-wrapper .toggle-password {
   position: absolute;
-  right: 12px;
+  right: 10px;
   background: none;
   border: none;
-  padding: 4px;
+  padding: 6px;
   cursor: pointer;
-  font-size: 16px;
-  color: #6b7280;
+  color: #5f6368;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+#promptify-card .password-input-wrapper .toggle-password:hover {
+  background: #f1f3f4;
 }
 
 #promptify-card .email-display {
-  background: #f9fafb;
+  background: #f8f9fa;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
-  color: #6b7280;
+  color: #5f6368;
 }
 
 #promptify-card .email-display strong {
-  color: #1f2937;
+  color: #202124;
   font-weight: 600;
 }
 
@@ -511,79 +561,80 @@
 
 /* ===== MAIN VIEW ===== */
 #promptify-card .main-view {
-  gap: 18px;
+  gap: 16px;
 }
 
 #promptify-card .input-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 #promptify-card .section-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: #5f6368;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
 }
 
 #promptify-card #userPrompt {
   width: 100%;
-  min-height: 130px;
+  min-height: 110px;
   max-height: 200px;
-  padding: 14px 16px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
   font-size: 14px;
   resize: vertical;
   box-sizing: border-box;
   transition: all 0.2s;
-  line-height: 1.6;
-  color: #1f2937;
+  line-height: 1.5;
+  color: #202124;
   font-family: inherit;
 }
 
 #promptify-card #userPrompt::placeholder {
-  color: #9ca3af;
+  color: #80868b;
 }
 
 #promptify-card #userPrompt:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #4d7bf3;
+  box-shadow: 0 0 0 3px rgba(77, 123, 243, 0.1);
 }
 
 #promptify-card .char-count {
   font-size: 12px;
-  color: #9ca3af;
+  color: #80868b;
   text-align: right;
 }
 
 #promptify-card .enhance-btn {
-  background: #3b82f6;
+  background: #4d7bf3;
   color: white;
   border: none;
-  padding: 8px 14px;
+  padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   transition: all 0.2s;
+  align-self: flex-end;
+  box-shadow: 0 1px 3px rgba(77, 123, 243, 0.2);
 }
 
-#promptify-card .enhance-btn-wrapper  {
-  display: flex;
-  justify-content: flex-end;
-}
 #promptify-card .enhance-btn:hover:not(:disabled) {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  background: #3d6de6;
+  box-shadow: 0 2px 6px rgba(77, 123, 243, 0.3);
+}
+
+#promptify-card .enhance-btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 #promptify-card .enhance-btn:disabled {
@@ -596,6 +647,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e8eaed;
 }
 
 #promptify-card .output-header {
@@ -606,87 +659,86 @@
 
 #promptify-card .output-badges {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 #promptify-card .badge {
   font-size: 11px;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 6px;
-  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 4px;
   letter-spacing: 0.3px;
 }
 
 #promptify-card .badge-blue {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #e8f0fe;
+  color: #1a73e8;
 }
 
 #promptify-card .badge-gray {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: #f1f3f4;
+  color: #5f6368;
 }
 
 #promptify-card .output-box {
-  background: #f9fafb;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
-  min-height: 100px;
-  max-height: 220px;
-  font-size: 14px;
-  color: #1f2937;
-    display: flex;
-
+  background: #f8f9fa;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  padding: 14px;
+  min-height: 90px;
+  max-height: 200px;
+  font-size: 13px;
+  color: #202124;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-y: auto;
-  line-height: 1.7;
+  line-height: 1.6;
 }
-#promptify-card .copy-btn-wrapper {
-  display: flex;
-  justify-content: flex-end;
-}
+
 #promptify-card .output-box::-webkit-scrollbar {
   width: 6px;
 }
 
 #promptify-card .output-box::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: #f1f3f4;
   border-radius: 3px;
 }
 
 #promptify-card .output-box::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #dadce0;
   border-radius: 3px;
 }
 
 #promptify-card .copy-btn {
-  background: #10b981;
-  color: white;
+  background: #edf2f7;
+  color: black;
   border: none;
-  padding: 12px 18px;
-  border-radius: 10px;
+  padding: 10px 18px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   transition: all 0.2s;
+  align-self: flex-end;
+  box-shadow: 0 1px 3px rgba(52, 168, 83, 0.2);
 }
 
 #promptify-card .copy-btn:hover {
-  background: #059669;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  background: #2d9548;
+  box-shadow: 0 2px 6px rgba(52, 168, 83, 0.3);
+}
+
+#promptify-card .copy-btn:active {
+  transform: translateY(1px);
 }
 
 #promptify-card .copy-btn.copied {
-  background: #059669;
+  background: #2d9548;
 }
 
 /* ===== TOAST ===== */
@@ -695,16 +747,16 @@
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%) translateY(100px);
-  background: #1f2937;
+  background: #202124;
   color: white;
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 14px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 500;
   z-index: 1000000;
   opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
 }
 
 .promptify-toast.show {
@@ -713,19 +765,19 @@
 }
 
 .promptify-toast.success {
-  background: #10b981;
+  background: #34a853;
 }
 
 .promptify-toast.error {
-  background: #ef4444;
+  background: #d93025;
 }
 
 .promptify-toast.info {
-  background: #3b82f6;
+  background: #4d7bf3;
 }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 450px) {
+@media (max-width: 420px) {
   #promptify-card {
     width: calc(100vw - 32px);
     right: -100%;
@@ -737,5 +789,9 @@
   
   #promptify-floating-btn {
     right: 16px;
+  }
+  
+  #promptify-card .card-body {
+    padding: 12px 16px;
   }
 }

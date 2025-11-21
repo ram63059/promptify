@@ -13,8 +13,19 @@ yarn-error.log*
 
 # Outputs
 dist/
-build/
+build/  
 out/
 
 # Supabase generated folder
 supabase/.temp/
+*.log
+# Extension
+packages/extension/build/
+# Site
+packages/site/.next/
+packages/site/out/
+# OS
+.DS_Store
+Thumbs.db
+# Docs
+docs/*.excalidraw.bin  # Binary wireframes

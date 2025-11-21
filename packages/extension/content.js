@@ -27,7 +27,6 @@ if (window.promptifyInjected) {
 } else {
   window.promptifyInjected = true;
 
-  // Create floating button on AI sites
   if (isAISite) {
     createFloatingButton();
   }
@@ -45,8 +44,16 @@ if (window.promptifyInjected) {
 
     floatingBtn = document.createElement('div');
     floatingBtn.id = 'promptify-floating-btn';
+    
+    // Load saved position or use default (50%)
+    chrome.storage.local.get(['floatingBtnPosition'], (result) => {
+      const savedPosition = result.floatingBtnPosition || 50; // Default 50% from top
+      floatingBtn.style.top = `${savedPosition}%`;
+    });
+    
     floatingBtn.innerHTML = `
-      <button class="float-btn" id="openPromptifyBtn" title="Open Promptify">
+      <button class="float-btn" id="openPromptifyBtn" title="Open Promptify (Drag to move)">
+        <div class="drag-handle">⋮⋮</div>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -56,11 +63,103 @@ if (window.promptifyInjected) {
     document.body.appendChild(floatingBtn);
 
     const btn = floatingBtn.querySelector('#openPromptifyBtn');
-    btn.addEventListener('click', () => {
-      if (!isVisible) {
+    
+    // Click to open panel
+    btn.addEventListener('click', (e) => {
+      if (!isDragging && !isVisible) {
         showCard();
       }
     });
+
+    // Make it draggable
+    makeDraggable(floatingBtn);
+  }
+
+  let isDragging = false;
+  let startY = 0;
+  let startTop = 0;
+
+  function makeDraggable(element) {
+    const btn = element.querySelector('.float-btn');
+    
+    btn.addEventListener('mousedown', startDrag);
+    btn.addEventListener('touchstart', startDrag, { passive: false });
+
+    function startDrag(e) {
+      isDragging = false;
+      
+      const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+      startY = clientY;
+      
+      // Get current top position in pixels
+      const rect = element.getBoundingClientRect();
+      startTop = rect.top;
+
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('mouseup', stopDrag);
+      document.addEventListener('touchmove', onDrag, { passive: false });
+      document.addEventListener('touchend', stopDrag);
+
+      btn.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+
+    function onDrag(e) {
+      const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+      const deltaY = clientY - startY;
+
+      // If moved more than 5px, it's a drag (not a click)
+      if (Math.abs(deltaY) > 5) {
+        isDragging = true;
+      }
+
+      if (isDragging) {
+        const newTop = startTop + deltaY;
+        const windowHeight = window.innerHeight;
+        const btnHeight = element.offsetHeight;
+
+        // Keep button within viewport bounds (with some padding)
+        const minTop = 80; // Top padding
+        const maxTop = windowHeight - btnHeight - 20; // Bottom padding
+
+        const constrainedTop = Math.max(minTop, Math.min(newTop, maxTop));
+        
+        // Update position
+        element.style.top = `${constrainedTop}px`;
+        element.style.transform = 'translateY(0)'; // Remove transform while dragging
+        
+        e.preventDefault();
+      }
+    }
+
+    function stopDrag(e) {
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('mouseup', stopDrag);
+      document.removeEventListener('touchmove', onDrag);
+      document.removeEventListener('touchend', stopDrag);
+
+      btn.style.cursor = 'grab';
+
+      if (isDragging) {
+        // Save position as percentage
+        const rect = element.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        const topPercent = (rect.top / windowHeight) * 100;
+        
+        // Save to chrome storage
+        chrome.storage.local.set({ floatingBtnPosition: topPercent });
+
+        // Reset transform
+        element.style.transform = 'translateY(0)';
+        
+        e.preventDefault();
+      }
+
+      // Reset dragging flag after a short delay to prevent click event
+      setTimeout(() => {
+        isDragging = false;
+      }, 100);
+    }
   }
 
   function toggleCard() {
@@ -132,9 +231,6 @@ if (window.promptifyInjected) {
           <span class="logo-text">Promptify</span>
         </div>
         <div class="header-right">
-          <button class="header-action-btn" id="headerActionBtn">
-            ${currentView === 'locked' ? '<span>Sign in</span>' : '<span>✕</span>'}
-          </button>
           <button class="close-btn-icon" id="closeBtn">✕</button>
         </div>
       </div>
@@ -161,10 +257,20 @@ if (window.promptifyInjected) {
   function getLockedViewHTML() {
     return `
       <div class="card-body locked-view">
-        <div class="locked-icon">🔒</div>
+        <div class="locked-icon-wrapper">
+          <svg class="locked-icon-svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+        </div>
         <h2 class="locked-title">Welcome to Promptify</h2>
-        <p class="locked-subtitle">Sign in to start enhancing your AI prompts with clarity and precision</p>
+        <p class="locked-subtitle">Sign in to start turning rough ideas into clear, ready-to-use AI prompts in seconds.</p>
         <button class="primary-btn" id="unlockBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
           <span>Sign in to Continue</span>
         </button>
         <div class="locked-footer">
@@ -177,7 +283,12 @@ if (window.promptifyInjected) {
   function getSignInViewHTML() {
     return `
       <div class="card-body signin-view">
-        <button class="back-btn" id="backBtn">← Back</button>
+        <button class="back-btn" id="backBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <span>Back</span>
+        </button>
         
         <div class="signin-header">
           <h2>Sign in to Promptify</h2>
@@ -199,7 +310,10 @@ if (window.promptifyInjected) {
         </div>
         
         <button class="email-signin-btn" id="emailSignInBtn">
-          <span>📧</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
           <span>Sign in with Email</span>
         </button>
         
@@ -213,7 +327,12 @@ if (window.promptifyInjected) {
   function getEmailStepHTML() {
     return `
       <div class="card-body email-step-view">
-        <button class="back-btn" id="backBtn">← Back</button>
+        <button class="back-btn" id="backBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <span>Back</span>
+        </button>
         
         <div class="step-header">
           <h2>Enter your email</h2>
@@ -247,7 +366,12 @@ if (window.promptifyInjected) {
   function getPasswordStepHTML() {
     return `
       <div class="card-body password-step-view">
-        <button class="back-btn" id="backBtn">← Back</button>
+        <button class="back-btn" id="backBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <span>Back</span>
+        </button>
         
         <div class="step-header">
           <h2>Enter your password</h2>
@@ -264,7 +388,12 @@ if (window.promptifyInjected) {
               autocomplete="current-password"
               autofocus
             />
-            <button class="toggle-password" id="togglePasswordBtn">👁️</button>
+            <button class="toggle-password" id="togglePasswordBtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
           </div>
           <span class="input-error" id="passwordError"></span>
         </div>
@@ -294,12 +423,14 @@ if (window.promptifyInjected) {
             <span id="charCount">0</span> / 2000
           </div>
         </div>
-        <div class="enhance-btn-wrapper">
+        
         <button class="enhance-btn" id="enhanceBtn">
-        <span>→</span>
-        <span>Make it clear</span>
+          <span>Make it clear</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
         </button>
-        </div>
         
         <div class="output-section" id="outputSection" style="display: none;">
           <div class="output-header">
@@ -310,13 +441,13 @@ if (window.promptifyInjected) {
             </div>
           </div>
           <div class="output-box" id="outputBox"></div>
-          
-           <div class="copy-btn-wrapper">
           <button class="copy-btn" id="copyBtn">
-            <span>📋</span>
-            <span>Copy to clipboard</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copy </span>
           </button>
-          </div>
         </div>
       </div>
     `;
@@ -325,17 +456,6 @@ if (window.promptifyInjected) {
   function setupEventListeners() {
     const closeBtn = card.querySelector('#closeBtn');
     if (closeBtn) closeBtn.addEventListener('click', hideCard);
-
-    const headerActionBtn = card.querySelector('#headerActionBtn');
-    if (headerActionBtn) {
-      headerActionBtn.addEventListener('click', () => {
-        if (currentView === 'locked') {
-          switchView('signin');
-        } else {
-          switchView('locked');
-        }
-      });
-    }
 
     const userMenuBtn = card.querySelector('#userMenuBtn');
     if (userMenuBtn) {
@@ -351,7 +471,6 @@ if (window.promptifyInjected) {
       dropdownLogout.addEventListener('click', handleLogout);
     }
 
-    // Close dropdown when clicking outside
     if (showUserDropdown) {
       setTimeout(() => {
         document.addEventListener('click', closeDropdownOnClickOutside);
@@ -522,10 +641,20 @@ if (window.promptifyInjected) {
     
     if (passwordInput.type === 'password') {
       passwordInput.type = 'text';
-      btn.textContent = '🙈';
+      btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        </svg>
+      `;
     } else {
       passwordInput.type = 'password';
-      btn.textContent = '👁️';
+      btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      `;
     }
   }
 
@@ -552,7 +681,7 @@ if (window.promptifyInjected) {
     }
 
     const btn = card.querySelector('#enhanceBtn');
-    btn.innerHTML = '<span>⏳</span><span>Enhancing...</span>';
+    btn.innerHTML = '<span>Enhancing...</span>';
     btn.disabled = true;
 
     setTimeout(() => {
@@ -564,7 +693,13 @@ if (window.promptifyInjected) {
       outputBox.textContent = enhanced;
       outputSection.style.display = 'flex';
       
-      btn.innerHTML = '<span>→</span><span>Make it clear</span>';
+      btn.innerHTML = `
+        <span>Make it clear</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      `;
       btn.disabled = false;
       
       showToast('✓ Prompt enhanced!', 'success');
@@ -578,7 +713,12 @@ if (window.promptifyInjected) {
     navigator.clipboard.writeText(text).then(() => {
       const btn = card.querySelector('#copyBtn');
       const originalHTML = btn.innerHTML;
-      btn.innerHTML = '<span>✓</span><span>Copied!</span>';
+      btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>Copied!</span>
+      `;
       btn.classList.add('copied');
 
       setTimeout(() => {
