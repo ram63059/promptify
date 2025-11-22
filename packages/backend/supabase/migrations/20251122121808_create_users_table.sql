@@ -24,6 +24,9 @@ CREATE INDEX idx_users_plan ON public.users(plan);
 CREATE OR REPLACE FUNCTION reset_monthly_quota()
 RETURNS TRIGGER AS $$  
 BEGIN
+
+  PERFORM set_config('search_path', 'public', true);
+  
   IF EXTRACT(MONTH FROM CURRENT_DATE) != EXTRACT(MONTH FROM NEW.reset_date) THEN
     NEW.prompts_left = CASE WHEN NEW.plan = 'starter' THEN 20 ELSE 200 END;
     NEW.reset_date = CURRENT_DATE;
