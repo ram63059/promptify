@@ -9,5 +9,9 @@ CREATE TABLE IF NOT EXISTS public.improvements (
 
 ALTER TABLE public.improvements ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read own improvements" ON public.improvements
-  FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can read own improvements" ON public.improvements;
+
+CREATE POLICY "Users can read own improvements"
+ON public.improvements
+FOR SELECT
+USING (user_id = (SELECT auth.uid()));
