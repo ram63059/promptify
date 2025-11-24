@@ -1,11 +1,16 @@
-
 {
   "manifest_version": 3,
   "name": "Promptify",
   "version": "1.0.0",
   "description": "Enhance your AI prompts with Gemini magic.",
-  "permissions": ["storage", "activeTab","scripting"],
-  "host_permissions": ["https://*.supabase.co/*"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://*.supabase.co/*"
+  ],
   "action": {
     "default_title": "Open Promptify",
     "default_icon": {
@@ -14,16 +19,23 @@
     }
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["floating-card.css"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "floating-card.css"
+      ]
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' ; object-src 'self'"
   }
 }
