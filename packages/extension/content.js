@@ -1,3 +1,4 @@
+// content.js
 console.log("CONTENT SCRIPT LOADED");
 
 let card = null;
@@ -7,6 +8,19 @@ let currentView = 'locked';
 let userEmail = '';
 let isAuthenticated = false;
 let showUserDropdown = false;
+let session = null; // will hold session returned from background
+let isDragging = false;
+
+// Helper to call background and await response
+function bgRequest(message) {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage(message, (res) => resolve(res));
+    } catch (err) {
+      resolve(null);
+    }
+  });
+}
 
 // Check if on AI site
 const AI_SITES = [
@@ -44,13 +58,18 @@ if (window.promptifyInjected) {
 
     floatingBtn = document.createElement('div');
     floatingBtn.id = 'promptify-floating-btn';
-    
+
     // Load saved position or use default (50%)
     chrome.storage.local.get(['floatingBtnPosition'], (result) => {
       const savedPosition = result.floatingBtnPosition || 50; // Default 50% from top
-      floatingBtn.style.top = `${savedPosition}%`;
+      // if numeric percent -> convert to CSS top
+      if (typeof savedPosition === 'number') {
+        floatingBtn.style.top = `${savedPosition}%`;
+      } else {
+        floatingBtn.style.top = '50%';
+      }
     });
-    
+
     floatingBtn.innerHTML = `
       <button class="float-btn" id="openPromptifyBtn" title="Open Promptify (Drag to move)">
         <div class="drag-handle">⋮⋮</div>
@@ -60,12 +79,20 @@ if (window.promptifyInjected) {
         </svg>
       </button>
     `;
+    Object.assign(floatingBtn.style, {
+      position: 'fixed',
+      right: '20px',
+      zIndex: 999999,
+      transform: 'translateY(-50%)',
+      cursor: 'grab'
+    });
     document.body.appendChild(floatingBtn);
 
     const btn = floatingBtn.querySelector('#openPromptifyBtn');
-    
+
     // Click to open panel
     btn.addEventListener('click', (e) => {
+      // ignore clicks triggered by drag
       if (!isDragging && !isVisible) {
         showCard();
       }
@@ -75,22 +102,21 @@ if (window.promptifyInjected) {
     makeDraggable(floatingBtn);
   }
 
-  let isDragging = false;
   let startY = 0;
   let startTop = 0;
 
   function makeDraggable(element) {
     const btn = element.querySelector('.float-btn');
-    
+
     btn.addEventListener('mousedown', startDrag);
     btn.addEventListener('touchstart', startDrag, { passive: false });
 
     function startDrag(e) {
       isDragging = false;
-      
+
       const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
       startY = clientY;
-      
+
       // Get current top position in pixels
       const rect = element.getBoundingClientRect();
       startTop = rect.top;
@@ -123,11 +149,11 @@ if (window.promptifyInjected) {
         const maxTop = windowHeight - btnHeight - 20; // Bottom padding
 
         const constrainedTop = Math.max(minTop, Math.min(newTop, maxTop));
-        
+
         // Update position
         element.style.top = `${constrainedTop}px`;
         element.style.transform = 'translateY(0)'; // Remove transform while dragging
-        
+
         e.preventDefault();
       }
     }
@@ -145,20 +171,20 @@ if (window.promptifyInjected) {
         const rect = element.getBoundingClientRect();
         const windowHeight = window.innerHeight;
         const topPercent = (rect.top / windowHeight) * 100;
-        
+
         // Save to chrome storage
         chrome.storage.local.set({ floatingBtnPosition: topPercent });
 
         // Reset transform
         element.style.transform = 'translateY(0)';
-        
+
         e.preventDefault();
       }
 
-      // Reset dragging flag after a short delay to prevent click event
+      // Reset dragging flag immediately to avoid blocking clicks
       setTimeout(() => {
         isDragging = false;
-      }, 100);
+      }, 50);
     }
   }
 
@@ -170,11 +196,12 @@ if (window.promptifyInjected) {
     }
   }
 
-  function showCard() {
+  async function showCard() {
     if (card) return;
 
     card = document.createElement('div');
     card.id = 'promptify-card';
+    card.className = 'promptify-card';
     card.innerHTML = getCardHTML();
 
     document.body.appendChild(card);
@@ -182,7 +209,27 @@ if (window.promptifyInjected) {
     document.addEventListener('keydown', escapeHandler);
 
     isVisible = true;
+    // small delay to allow CSS transitions if any
     setTimeout(() => card.classList.add('visible'), 10);
+
+    // On open, check session and update view/quota
+    const res = await bgRequest({ action: 'getSession' });
+    if (res && res.session) {
+      session = res.session;
+      isAuthenticated = true;
+      // optionally set userEmail from session metadata:
+      userEmail = session.user?.email || userEmail;
+      // load quota
+      await loadUserQuota();
+      // switch to main if was locked
+      if (currentView === 'locked') currentView = 'main';
+      updateCardContent();
+    } else {
+      isAuthenticated = false;
+      session = null;
+      currentView = 'locked';
+      updateCardContent();
+    }
   }
 
   function getCardHTML() {
@@ -213,8 +260,8 @@ if (window.promptifyInjected) {
               <div class="dropdown-header">
                 <div class="dropdown-avatar">👤</div>
                 <div class="dropdown-info">
-                  <div class="dropdown-name">Alex Johnson</div>
-                  <div class="dropdown-plan">Pro plan</div>
+                  <div class="dropdown-name">${session?.user?.email || 'User'}</div>
+                  <div class="dropdown-plan">Plan: N/A</div>
                 </div>
               </div>
               <button class="dropdown-logout" id="dropdownLogout">Log out</button>
@@ -238,7 +285,7 @@ if (window.promptifyInjected) {
   }
 
   function getBodyHTML() {
-    switch(currentView) {
+    switch (currentView) {
       case 'locked':
         return getLockedViewHTML();
       case 'signin':
@@ -550,9 +597,14 @@ if (window.promptifyInjected) {
     updateCardContent();
   }
 
-  function updateCardContent() {
+  async function updateCardContent() {
     const cardContent = card.querySelector('.card-content');
-    cardContent.innerHTML = getHeaderHTML() + getBodyHTML();
+    // If cardContent not found (first render), set innerHTML of card
+    if (!cardContent) {
+      card.innerHTML = getCardHTML();
+    } else {
+      cardContent.innerHTML = getHeaderHTML() + getBodyHTML();
+    }
     setupEventListeners();
   }
 
@@ -565,16 +617,22 @@ if (window.promptifyInjected) {
     switchView(viewStack[currentView] || 'locked');
   }
 
-  function handleGoogleAuth() {
+  async function handleGoogleAuth() {
     const btn = card.querySelector('#googleAuthBtn');
-    btn.innerHTML = '<span>Signing in...</span>';
-    btn.disabled = true;
+    if (btn) { btn.innerHTML = '<span>Signing in...</span>'; btn.disabled = true; }
 
-    setTimeout(() => {
-      showToast('✓ Signed in with Google!', 'success');
-      isAuthenticated = true;
-      switchView('main');
-    }, 2000);
+    // Delegate to background / Supabase for real Google flow if implemented
+    const res = await bgRequest({ action: 'startGoogleOAuth' });
+    // startGoogleOAuth should open a new tab for OAuth and background handles flow.
+    // For now show success only if background returns success
+    if (res && res.url) {
+      // open the auth url in a new tab
+      window.open(res.url, '_blank');
+      showToast('Opened Google sign-in in a new tab', 'info');
+    } else {
+      showToast('Could not start Google sign-in', 'error');
+      if (btn) { btn.innerHTML = 'Continue with Google'; btn.disabled = false; }
+    }
   }
 
   function handleEmailContinue() {
@@ -598,13 +656,14 @@ if (window.promptifyInjected) {
     btn.innerHTML = '<span>Checking...</span>';
     btn.disabled = true;
 
+    // For UX: keep existing flow of showing password step
     setTimeout(() => {
       userEmail = email;
       switchView('password-step');
-    }, 1500);
+    }, 400);
   }
 
-  function handlePasswordSignIn() {
+  async function handlePasswordSignIn() {
     const passwordInput = card.querySelector('#passwordInput');
     const passwordError = card.querySelector('#passwordError');
     const password = passwordInput.value;
@@ -620,58 +679,50 @@ if (window.promptifyInjected) {
     btn.innerHTML = '<span>Signing in...</span>';
     btn.disabled = true;
 
-    setTimeout(() => {
-      const success = Math.random() > 0.3;
-      
-      if (success) {
-        showToast('✓ Welcome back!', 'success');
-        isAuthenticated = true;
-        switchView('main');
-      } else {
-        passwordError.textContent = 'Invalid password. Please try again.';
-        btn.innerHTML = '<span>Sign in</span>';
-        btn.disabled = false;
-      }
-    }, 1500);
+    // Call background to perform supabase sign in
+    const res = await bgRequest({ action: 'signIn', email: userEmail, password });
+
+    if (!res) {
+      passwordError.textContent = 'Network error. Try again.';
+      btn.innerHTML = '<span>Sign in</span>';
+      btn.disabled = false;
+      return;
+    }
+
+    if (res.error) {
+      passwordError.textContent = res.error.message || 'Invalid credentials';
+      btn.innerHTML = '<span>Sign in</span>';
+      btn.disabled = false;
+      return;
+    }
+
+    // Success: store session locally and load quota
+    session = res.data?.session || null;
+    isAuthenticated = !!session;
+    showToast('✓ Welcome back!', 'success');
+    currentView = 'main';
+    await loadUserQuota();
+    updateCardContent();
   }
 
-  function togglePasswordVisibility() {
-    const passwordInput = card.querySelector('#passwordInput');
-    const btn = card.querySelector('#togglePasswordBtn');
-    
-    if (passwordInput.type === 'password') {
-      passwordInput.type = 'text';
-      btn.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-          <line x1="1" y1="1" x2="23" y2="23"></line>
-        </svg>
-      `;
-    } else {
-      passwordInput.type = 'password';
-      btn.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-          <circle cx="12" cy="12" r="3"></circle>
-        </svg>
-      `;
+  async function loadUserQuota() {
+    if (!session || !session.user) {
+      return;
+    }
+    const res = await bgRequest({ action: 'getQuota', userId: session.user.id });
+    if (res && res.data) {
+      // update UI: this project didn't have a dedicated element, so we'll show in dropdown via session or keep silent
+      // we can store prompts in session meta if desired
+      // minimal: attach to card as data attribute or show toast
+      // But we update the UI by re-rendering (dropdown shows session email)
+      // If you have a quota element, update it here
+      // Example: document.querySelector('#quotaCount').innerText = res.data.prompts_left;
+      // We'll add a small hidden element if needed
+      card.dataset.promptsLeft = res.data.prompts_left ?? 0;
     }
   }
 
-  function handleForgotPassword(e) {
-    e.preventDefault();
-    showToast('Password reset link sent to ' + userEmail, 'info');
-  }
-
-  function handleLogout() {
-    isAuthenticated = false;
-    userEmail = '';
-    showUserDropdown = false;
-    switchView('locked');
-    showToast('Logged out successfully', 'info');
-  }
-
-  function handleEnhance() {
+  async function handleEnhance() {
     const promptInput = card.querySelector('#userPrompt');
     const prompt = promptInput.value.trim();
 
@@ -684,31 +735,59 @@ if (window.promptifyInjected) {
     btn.innerHTML = '<span>Enhancing...</span>';
     btn.disabled = true;
 
-    setTimeout(() => {
-      const enhanced = `You are an expert communication assistant. Transform the following request into a concise, friendly email under 120 words. Maintain a professional tone, clearly state the purpose, and end with a direct call to action proposing a meeting next week. Return only the final email draft in English, formatted in short paragraphs. If details are missing, make reasonable assumptions.\n\nOriginal request: ${prompt}`;
-      
-      const outputBox = card.querySelector('#outputBox');
-      const outputSection = card.querySelector('#outputSection');
-      
-      outputBox.textContent = enhanced;
-      outputSection.style.display = 'flex';
-      
+    // If not authenticated, prompt sign in
+    if (!session || !session.user) {
+      showToast('Please sign in first', 'error');
       btn.innerHTML = `
         <span>Make it clear</span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="5" y1="12" x2="19" y2="12"></line>
           <polyline points="12 5 19 12 12 19"></polyline>
-        </svg>
-      `;
+        </svg>`;
       btn.disabled = false;
-      
-      showToast('✓ Prompt enhanced!', 'success');
-    }, 2500);
-  }
+      return;
+    }
 
+    // Call background, which will call the Supabase Edge function
+    const res = await bgRequest({
+      action: 'enhanceText',
+      text: prompt,
+      userId: session.user.id,
+      token: session.access_token
+    });
+
+    // handle server response
+    const outputBox = card.querySelector('#outputBox');
+    const outputSection = card.querySelector('#outputSection');
+
+    if (!res) {
+      showToast('Server error. Try again.', 'error');
+    } else if (res.error) {
+      showToast(res.error || 'Enhance failed', 'error');
+    } else {
+      const polished = res.polished ?? res.polished_text ?? res.text ?? '';
+      outputBox.textContent = polished;
+      outputSection.style.display = 'flex';
+      // If backend returned updated quota
+      if (res.quota_left !== undefined) {
+        card.dataset.promptsLeft = res.quota_left;
+      }
+      showToast('✓ Prompt enhanced!', 'success');
+    }
+
+    // restore button
+    btn.innerHTML = `
+      <span>Make it clear</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+        <polyline points="12 5 19 12 12 19"></polyline>
+      </svg>
+    `;
+    btn.disabled = false;
+  }
   function handleCopy() {
     const outputBox = card.querySelector('#outputBox');
-    const text = outputBox.textContent;
+    const text = outputBox.textContent || '';
 
     navigator.clipboard.writeText(text).then(() => {
       const btn = card.querySelector('#copyBtn');
@@ -736,17 +815,77 @@ if (window.promptifyInjected) {
     }
   }
 
+  function togglePasswordVisibility() {
+    const passwordInput = card.querySelector('#passwordInput');
+    const toggleBtn = card.querySelector('#togglePasswordBtn');
+
+    if (!passwordInput || !toggleBtn) return;
+
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      toggleBtn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        </svg>
+      `;
+    } else {
+      passwordInput.type = 'password';
+      toggleBtn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      `;
+    }
+  }
+
+  function handleForgotPassword(e) {
+    e.preventDefault();
+    window.open('https://yourwebsite.com/reset-password', '_blank');
+    showToast('Password reset opened in new tab', 'info');
+  }
+
+  async function handleLogout() {
+    showUserDropdown = false;
+
+    const res = await bgRequest({ action: 'logout' });
+
+    if (res && res.success) {
+      isAuthenticated = false;
+      session = null;
+      userEmail = '';
+      currentView = 'locked';
+      updateCardContent();
+      showToast('✓ Logged out successfully', 'success');
+    } else {
+      showToast('Logout failed', 'error');
+    }
+  }
+
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `promptify-toast ${type}`;
     toast.textContent = message;
+    Object.assign(toast.style, {
+      position: 'fixed',
+      bottom: '24px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 1000000,
+      padding: '10px 14px',
+      borderRadius: '8px',
+      background: type === 'error' ? '#ffdddd' : (type === 'success' ? '#ddffdf' : '#fff'),
+      color: '#111',
+      boxShadow: '0 6px 18px rgba(0,0,0,0.12)'
+    });
     document.body.appendChild(toast);
 
     setTimeout(() => toast.classList.add('show'), 100);
     setTimeout(() => {
       toast.classList.remove('show');
       setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 2600);
   }
 
   function isValidEmail(email) {
@@ -775,6 +914,7 @@ if (window.promptifyInjected) {
     isVisible = false;
   }
 
+  // Ensure we remove any stray existing card
   const existingCard = document.getElementById('promptify-card');
   if (existingCard) existingCard.remove();
 }
