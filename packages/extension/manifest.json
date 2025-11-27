@@ -10,7 +10,8 @@
     "identity"
   ],
   "host_permissions": [
-    "https://*.supabase.co/*"
+    "https://*.supabase.co/*",
+    "https://accounts.google.com/*"
   ],
   "action": {
     "default_title": "Open Promptify",
@@ -20,8 +21,7 @@
     }
   },
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
@@ -38,15 +38,5 @@
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' ; object-src 'self'"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "redirect.html"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ]
+  }
 }
