@@ -11,6 +11,31 @@ try {
 let supabaseClient = null;
 let supabaseReady = false;
 
+// Custom Storage Adapter for Chrome Extension
+const ChromeStorageAdapter = {
+  getItem: (key) => {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([key], (result) => {
+        resolve(result[key]);
+      });
+    });
+  },
+  setItem: (key, value) => {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ [key]: value }, () => {
+        resolve();
+      });
+    });
+  },
+  removeItem: (key) => {
+    return new Promise((resolve) => {
+      chrome.storage.local.remove([key], () => {
+        resolve();
+      });
+    });
+  },
+};
+
 // Initialize Supabase
 function initSupabase() {
   try {
@@ -21,7 +46,14 @@ function initSupabase() {
       const SUPABASE_URL = "https://gogrykraivlrmafeqicc.supabase.co";
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvZ3J5a3JhaXZscm1hZmVxaWNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjkyODMsImV4cCI6MjA3ODk0NTI4M30.Y-9xNDjrOn-S5TNvnVQVlSi2XFmiSdz745MkQicVniw";
 
-      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          storage: ChromeStorageAdapter,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+        },
+      });
       supabaseReady = true;
       console.log('[BG] ✅ Supabase client initialized');
       return true;
@@ -95,7 +127,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const userId = msg.userId;
       const { data } = await supabaseClient
         .from("users")
-        .select("prompts_left")
+        .select("prompts_left, subscription_status")
         .eq("id", userId)
         .single();
 
