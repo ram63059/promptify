@@ -9,6 +9,7 @@ let userEmail = '';
 let isAuthenticated = false;
 let showUserDropdown = false;
 let session = null; // will hold session returned from background
+let userSubscriptionStatus = 'inactive'; // default to inactive
 let isDragging = false;
 
 // Helper to call background and await response
@@ -617,48 +618,48 @@ if (window.promptifyInjected) {
     switchView(viewStack[currentView] || 'locked');
   }
 
-async function handleGoogleAuth() {
-  const btn = card.querySelector('#googleAuthBtn');
-  if (btn) { 
-    btn.innerHTML = '<span>Opening Google sign-in...</span>'; 
-    btn.disabled = true; 
-  }
-
-  try {
-    console.log('Starting Google OAuth from content script...');
-    
-    const res = await bgRequest({ action: 'startGoogleOAuth' });
-    
-    console.log('Google OAuth response:', res);
-    
-    if (res && res.error) {
-      showToast(res.error, 'error');
-      console.error('Google OAuth error:', res.error);
-    } else if (res && res.success && res.session) {
-      // OAuth successful - update UI
-      session = res.session;
-      isAuthenticated = true;
-      userEmail = session.user?.email || '';
-      
-      console.log('User signed in:', userEmail);
-      
-      showToast('✓ Signed in with Google!', 'success');
-      currentView = 'main';
-      await loadUserQuota();
-      updateCardContent();
-      return;
-    } else {
-      showToast('Google sign-in was cancelled or failed', 'error');
-      console.error('Unexpected response:', res);
+  async function handleGoogleAuth() {
+    const btn = card.querySelector('#googleAuthBtn');
+    if (btn) {
+      btn.innerHTML = '<span>Opening Google sign-in...</span>';
+      btn.disabled = true;
     }
-  } catch (error) {
-    console.error('Google auth error:', error);
-    showToast('Could not start Google sign-in', 'error');
-  }
 
-  // Reset button on error
-  if (btn) { 
-    btn.innerHTML = `
+    try {
+      console.log('Starting Google OAuth from content script...');
+
+      const res = await bgRequest({ action: 'startGoogleOAuth' });
+
+      console.log('Google OAuth response:', res);
+
+      if (res && res.error) {
+        showToast(res.error, 'error');
+        console.error('Google OAuth error:', res.error);
+      } else if (res && res.success && res.session) {
+        // OAuth successful - update UI
+        session = res.session;
+        isAuthenticated = true;
+        userEmail = session.user?.email || '';
+
+        console.log('User signed in:', userEmail);
+
+        showToast('✓ Signed in with Google!', 'success');
+        currentView = 'main';
+        await loadUserQuota();
+        updateCardContent();
+        return;
+      } else {
+        showToast('Google sign-in was cancelled or failed', 'error');
+        console.error('Unexpected response:', res);
+      }
+    } catch (error) {
+      console.error('Google auth error:', error);
+      showToast('Could not start Google sign-in', 'error');
+    }
+
+    // Reset button on error
+    if (btn) {
+      btn.innerHTML = `
       <svg width="20" height="20" viewBox="0 0 20 20">
         <path fill="#4285F4" d="M19.6 10.23c0-.82-.1-1.42-.25-2.05H10v3.72h5.5c-.15.96-.74 2.31-2.04 3.22v2.45h3.16c1.89-1.73 2.98-4.3 2.98-7.34z"/>
         <path fill="#34A853" d="M13.46 15.13c-.83.59-1.96 1-3.46 1-2.64 0-4.88-1.74-5.68-4.15H1.07v2.52C2.72 17.75 6.09 20 10 20c2.7 0 4.96-.89 6.62-2.42l-3.16-2.45z"/>
@@ -666,10 +667,10 @@ async function handleGoogleAuth() {
         <path fill="#EA4335" d="M10 3.88c1.88 0 3.13.81 3.85 1.48l2.84-2.76C14.96.99 12.7 0 10 0 6.09 0 2.72 2.25 1.07 5.51l3.24 2.52C5.12 5.62 7.36 3.88 10 3.88z"/>
       </svg>
       <span>Continue with Google</span>
-    `; 
-    btn.disabled = false; 
+    `;
+      btn.disabled = false;
+    }
   }
-}
 
   function handleEmailContinue() {
     const emailInput = card.querySelector('#emailInput');
@@ -736,6 +737,10 @@ async function handleGoogleAuth() {
     session = res.data?.session || null;
     isAuthenticated = !!session;
     showToast('✓ Welcome back!', 'success');
+    // Success: store session locally and load quota
+    session = res.data?.session || null;
+    isAuthenticated = !!session;
+    showToast('✓ Welcome back!', 'success');
     currentView = 'main';
     await loadUserQuota();
     updateCardContent();
@@ -747,14 +752,12 @@ async function handleGoogleAuth() {
     }
     const res = await bgRequest({ action: 'getQuota', userId: session.user.id });
     if (res && res.data) {
-      // update UI: this project didn't have a dedicated element, so we'll show in dropdown via session or keep silent
-      // we can store prompts in session meta if desired
-      // minimal: attach to card as data attribute or show toast
-      // But we update the UI by re-rendering (dropdown shows session email)
-      // If you have a quota element, update it here
-      // Example: document.querySelector('#quotaCount').innerText = res.data.prompts_left;
-      // We'll add a small hidden element if needed
       card.dataset.promptsLeft = res.data.prompts_left ?? 0;
+
+      if (res.data.subscription_status) {
+        userSubscriptionStatus = res.data.subscription_status;
+        console.log('User subscription status:', userSubscriptionStatus);
+      }
     }
   }
 
@@ -784,6 +787,52 @@ async function handleGoogleAuth() {
       return;
     }
 
+    const outputBox = card.querySelector('#outputBox');
+    const outputSection = card.querySelector('#outputSection');
+
+    // CHECK SUBSCRIPTION STATUS
+    if (userSubscriptionStatus !== 'active') {
+      // Show sample blurred text + upgrade button
+      outputSection.style.display = 'flex';
+
+      // Sample text to blur
+      const sampleText = "Here is a refined version of your text that is clear, concise, and professional. This content is blurred to demonstrate the premium quality available to subscribers. Upgrade now to unlock the full potential of Promptify and get crystal clear results every time.";
+
+      outputBox.innerHTML = `
+        <div class="output-wrapper">
+          <div class="blurred-text">${sampleText}</div>
+          <div class="upgrade-overlay">
+            <button class="upgrade-btn" id="upgradeBtn">
+              <span>Upgrade to View</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Add listener to new button
+      const upgradeBtn = outputBox.querySelector('#upgradeBtn');
+      if (upgradeBtn) {
+        upgradeBtn.addEventListener('click', () => {
+          window.open('https://yourwebsite.com/pricing', '_blank');
+        });
+      }
+
+      // Reset main button
+      btn.innerHTML = `
+        <span>Make it clear</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      `;
+      btn.disabled = false;
+      return;
+    }
+
     // Call background, which will call the Supabase Edge function
     const res = await bgRequest({
       action: 'enhanceText',
@@ -791,10 +840,6 @@ async function handleGoogleAuth() {
       userId: session.user.id,
       token: session.access_token
     });
-
-    // handle server response
-    const outputBox = card.querySelector('#outputBox');
-    const outputSection = card.querySelector('#outputSection');
 
     if (!res) {
       showToast('Server error. Try again.', 'error');
@@ -804,6 +849,10 @@ async function handleGoogleAuth() {
       const polished = res.polished ?? res.polished_text ?? res.text ?? '';
       outputBox.textContent = polished;
       outputSection.style.display = 'flex';
+
+      // Ensure no blur classes
+      outputBox.classList.remove('blurred-text');
+
       // If backend returned updated quota
       if (res.quota_left !== undefined) {
         card.dataset.promptsLeft = res.quota_left;
@@ -821,6 +870,7 @@ async function handleGoogleAuth() {
     `;
     btn.disabled = false;
   }
+
   function handleCopy() {
     const outputBox = card.querySelector('#outputBox');
     const text = outputBox.textContent || '';
