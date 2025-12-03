@@ -26,4 +26,3 @@ The goal is to make writing prompts faster and easier without switching tabs or 
 - Early planning and structure make the project easier to expand.
 - Semantic commits help keep Git history clear and easy to navigate.
 
-*Last Updated: Phase 1 complete. Moving to Extension UI and basic auth.*
